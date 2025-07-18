@@ -450,4 +450,45 @@ input {
     #search-bar-container {
         margin: 40px 0;
     }
+
+}
+#pagination-container {
+    position: fixed; /* fixe la pagination en bas */
+    bottom: 20px;    /* distance du bas */
+    left: 50%;       /* centre horizontal */
+    transform: translateX(-50%); /* ajuste la position pour être parfaitement centré */
+    display: flex;
+    align-items: center;
+    gap: 15px;       /* espace entre les boutons et le texte */
+    background-color: rgba(255, 255, 255, 0.9); /* fond blanc semi-transparent */
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.15);
+    z-index: 1000;  /* devant tout le reste */
+}
+
+#pagination-container button {
+    background-color: #2F9AFF; /* bleu clair */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#pagination-container button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#pagination-container button:hover:not(:disabled) {
+    background-color: #1a6fcc;
+}
+
+#pagination-container #page-info {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #333;
 }

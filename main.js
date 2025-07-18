@@ -1,218 +1,10 @@
-/**open info when pokemon from list is clicked */
-function openInfo(id) {
-    document.getElementById('current-pokemon-empty').classList.add('hide');
+/*** VARIABLES GLOBALES ***/
+let pokemons = [' '];            // Tableau de pokémons (avec un placeholder au début)
+let currentList = [];            // Liste filtrée ou complète à afficher
+let currentPage = 1;             // Page courante
+const itemsPerPage = 30;         // Nombre d'éléments par page
 
-    if(window.innerWidth > 1100){
-        slideOutPokemonInfo();
-
-        setTimeout(function(){
-            fetchPokemonInfo(id);
-            updateCurrentPokemonImage(id);
-        }, 350);
-    } else {
-        fetchPokemonInfo(id);
-        updateCurrentPokemonImage(id);
-    };
-};
-
-/**fetch pokemon infos */
-async function fetchPokemonInfo(id) {
-    const urlPokemon = 'https://pokeapi.co/api/v2/pokemon/' + id;
-    const urlSpecies = 'https://pokeapi.co/api/v2/pokemon-species/' + id;
-    const responsePokemon = await fetch(urlPokemon);
-    const responseSpecies = await fetch(urlSpecies);
-    const pokemon = await responsePokemon.json();
-    const species = await responseSpecies.json();
-
-    const reponseEvolutions = await fetch(species.evolution_chain.url);
-    const evolution_chain = await reponseEvolutions.json();
-
-    setupPokemonAbout(pokemon, id, species);
-    setupPokemonStats(pokemon);
-    setupPokemonAbilities(pokemon);
-    setupEvolutionChain(evolution_chain);
-    setupResponsiveBackground(pokemon);
-
-    slideInPokemonInfo();
-        
-    if(window.innerWidth < 1100){
-        openPokemonResponsiveInfo();
-    };
-};
-
-/**update pokemon image & adjust height to varying sprite dimensions ---> (to position directly above info) */
-function updateCurrentPokemonImage(id) {
-
-    const currentPokemonImage = document.getElementById('current-pokemon-image');
-    const img = new Image();
-
-    img.onload = function() {
-        currentPokemonImage.src = this.src;
-        currentPokemonImage.style.height = this.height * 3 + 'px';
-    };
-
-    if(id >= 650) {
-        img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/' + id + '.png';
-    } else {
-        img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/' + id + '.gif';
-    };
-};
-
-/**setup pokemon id, name, types, height, weight and description */
-function setupPokemonAbout(pokemon, id, species) {
-    document.getElementById('current-pokemon-info').classList.remove('hide');
-    document.getElementById('current-pokemon-id').innerHTML = 'N° ' + pokemon.id;
-    document.getElementById('current-pokemon-name').innerHTML = dressUpPayloadValue(pokemon.name);
-    document.getElementById('current-pokemon-types').innerHTML = getTypeContainers(pokemons[id - 1].types);
-    document.getElementById('current-pokemon-height').innerHTML = pokemon.height / 10 + 'm';
-    document.getElementById('current-pokemon-weight').innerHTML = pokemon.weight / 10 + 'kg';
-
-    for(i = 0; i < species.flavor_text_entries.length; i++) {
-        if(species.flavor_text_entries[i].language.name == 'en'){
-            document.getElementById('current-pokemon-description').innerHTML = dressUpPayloadValue(species.flavor_text_entries[i].flavor_text.replace('', ' '));
-            break;
-        };
-    };
-};
-
-/**setup pokemon stats */
-function setupPokemonStats(pokemon) {
-    document.getElementById('current-pokemon-stats-atk').innerHTML = pokemon.stats[0].base_stat;
-    document.getElementById('current-pokemon-stats-hp').innerHTML = pokemon.stats[1].base_stat;
-    document.getElementById('current-pokemon-stats-def').innerHTML = pokemon.stats[2].base_stat;
-    document.getElementById('current-pokemon-stats-spa').innerHTML = pokemon.stats[3].base_stat;
-    document.getElementById('current-pokemon-stats-spd').innerHTML = pokemon.stats[4].base_stat;
-    document.getElementById('current-pokemon-stats-speed').innerHTML = pokemon.stats[5].base_stat;
-    document.getElementById('current-pokemon-stats-total').innerHTML = pokemon.stats[0].base_stat + pokemon.stats[1].base_stat + pokemon.stats[2].base_stat + pokemon.stats[3].base_stat + pokemon.stats[4].base_stat + pokemon.stats[5].base_stat;
-};
-
-/**setup pokemon abilities */
-function setupPokemonAbilities(pokemon) {
-    document.getElementById('current-pokemon-abilitiy-0').innerHTML = dressUpPayloadValue(pokemon.abilities[0].ability.name);
-    if(pokemon.abilities[1]){
-        document.getElementById('current-pokemon-abilitiy-1').classList.remove('hide');
-        document.getElementById('current-pokemon-abilitiy-1').innerHTML = dressUpPayloadValue(pokemon.abilities[1].ability.name);
-    } else {
-        document.getElementById('current-pokemon-abilitiy-1').classList.add('hide');
-    };
-};
-
-/**setup evolution chain (all 3 evolutions) */
-function setupEvolutionChain(evolutionChain) {
-    const chain = evolutionChain.chain
-    const chainContainer =  document.getElementById('current-pokemon-evolution-chain-container')
-    const chainImages = [document.getElementById('current-pokemon-evolution-0'), document.getElementById('current-pokemon-evolution-1'), document.getElementById('current-pokemon-evolution-2')]
-    const chainLevels = [document.getElementById('current-pokemon-evolution-level-0'), document.getElementById('current-pokemon-evolution-level-1')]
-
-    if(chain.evolves_to.length != 0) {
-        chainContainer.classList.remove('hide');
-
-        setupEvolution(chain, 0);
-
-        if(chain.evolves_to[0].evolves_to.length != 0) {
-            setupEvolution(chain.evolves_to[0], 1);
-
-            chainImages[2].classList.remove('hide');
-            chainLevels[1].classList.remove('hide');
-        } else {
-            chainImages[2].classList.add('hide');
-            chainLevels[1].classList.add('hide');
-        };
-    } else {
-        chainContainer.classList.add('hide');
-    };
-};
-
-/**setup evolution images and level*/
-function setupEvolution(chain, no) {
-    const chainImages = [document.getElementById('current-pokemon-evolution-0'), document.getElementById('current-pokemon-evolution-1'), document.getElementById('current-pokemon-evolution-2')];
-    const chainLevels = [document.getElementById('current-pokemon-evolution-level-0'), document.getElementById('current-pokemon-evolution-level-1')];
-    
-    chainImages[no].src= 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + filterIdFromSpeciesURL(chain.species.url) + '.png';
-    chainImages[no].setAttribute('onClick', 'javascript: ' + 'openInfo(' + filterIdFromSpeciesURL(chain.species.url) + ')');
-    chainImages[no + 1].src= 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + filterIdFromSpeciesURL(chain.evolves_to[0].species.url) + '.png';
-    chainImages[no + 1].setAttribute('onClick', 'javascript: ' + 'openInfo(' + filterIdFromSpeciesURL(chain.evolves_to[0].species.url) + ')');
-
-    if(chain.evolves_to[0].evolution_details[0].min_level) {
-        chainLevels[no].innerHTML = 'Lv. ' + chain.evolves_to[0].evolution_details[0].min_level;
-    } else {
-        chainLevels[no].innerHTML = '?';
-    };
-};
-
-/**filter id from species url */
-function filterIdFromSpeciesURL(url){
-    return url.replace('https://pokeapi.co/api/v2/pokemon-species/', '').replace('/', '');
-};
-
-
-
-/**------------------------- Responsive ---------------------------------------------------------------- */
-function setupResponsiveBackground(pokemon) {
-    document.getElementById('current-pokemon-responsive-background').style.background= typeColors[pokemon.types[0].type.name];
-};
-
-function openPokemonResponsiveInfo(){
-    document.getElementById('current-pokemon-container').classList.remove('hide');
-    document.getElementById('current-pokemon-container').style.display = 'flex';
-    document.getElementById('current-pokemon-responsive-close').classList.remove('hide');
-    
-    document.getElementById('current-pokemon-responsive-background').classList.remove('hide');
-
-    document.getElementById('current-pokemon-responsive-background').style.opacity = 0;
-    setTimeout(function(){
-        document.getElementById('current-pokemon-responsive-background').style.opacity = 1;
-    }, 20);
-
-    document.getElementsByTagName('html')[0].style.overflow = 'hidden';
-};
-
-function closePokemonInfo(){
-    setTimeout(function(){
-        document.getElementById('current-pokemon-container').classList.add('hide');
-        document.getElementById('current-pokemon-responsive-close').classList.add('hide');
-        
-        document.getElementById('current-pokemon-responsive-background').classList.add('hide');
-    },350);
-
-    document.getElementById('current-pokemon-responsive-background').style.opacity = 1;
-    setTimeout(function(){
-        document.getElementById('current-pokemon-responsive-background').style.opacity = 0;
-    }, 10);
-    
-    document.getElementsByTagName('html')[0].style.overflow = 'unset';
-
-    slideOutPokemonInfo();
-};
-
-/**make current pokemon container visible after resizing to < 1100px width && show scrollbar*/
-window.addEventListener('resize', function(){
-    if(document.getElementById('current-pokemon-container').classList.contains('slide-out')){
-        document.getElementById('current-pokemon-container').classList.replace('slide-out', 'slide-in');
-    };
-
-    if(window.innerWidth > 1100) {
-        document.getElementsByTagName('html')[0].style.overflow = 'unset';
-    };
-});
-
-
-
-
-/**------------------------- Animations ---------------------------------------------------------------- */
-function slideOutPokemonInfo(){
-    document.getElementById('current-pokemon-container').classList.remove('slide-in');
-    document.getElementById('current-pokemon-container').classList.add('slide-out');
-};
-
-function slideInPokemonInfo(){
-    document.getElementById('current-pokemon-container').classList.add('slide-in');
-    document.getElementById('current-pokemon-container').classList.remove('slide-out');
-};
-let currentlyShowingAmount = 0;
-let maxIndex = 29;
-let currentList = [];
-
+/*** COULEURS TYPES POKEMON ***/
 const typeColors = {
     'normal': '#BCBCAC',
     'fighting': '#BC5442',
@@ -235,51 +27,266 @@ const typeColors = {
     'shadow': '#0E2E4C'
 };
 
-/**update pokemon list to */
-function updatePokemonList() {
-    if (currentlyShowingAmount <= maxIndex) {
-        renderPokemonListItem(currentlyShowingAmount);
-    };
-};
 
-/**render */
+/*** FONCTIONS PRINCIPALES ***/
+
+/** Ouvre les infos d’un Pokémon au clic */
+function openInfo(id) {
+    document.getElementById('current-pokemon-empty').classList.add('hide');
+
+    if(window.innerWidth > 1100){
+        slideOutPokemonInfo();
+
+        setTimeout(function(){
+            fetchPokemonInfo(id);
+            updateCurrentPokemonImage(id);
+        }, 350);
+    } else {
+        fetchPokemonInfo(id);
+        updateCurrentPokemonImage(id);
+    }
+}
+
+/** Récupère les infos d’un Pokémon via l’API */
+async function fetchPokemonInfo(id) {
+    const urlPokemon = 'https://pokeapi.co/api/v2/pokemon/' + id;
+    const urlSpecies = 'https://pokeapi.co/api/v2/pokemon-species/' + id;
+
+    const responsePokemon = await fetch(urlPokemon);
+    const responseSpecies = await fetch(urlSpecies);
+
+    const pokemon = await responsePokemon.json();
+    const species = await responseSpecies.json();
+
+    const reponseEvolutions = await fetch(species.evolution_chain.url);
+    const evolution_chain = await reponseEvolutions.json();
+
+    setupPokemonAbout(pokemon, id, species);
+    setupPokemonStats(pokemon);
+    setupPokemonAbilities(pokemon);
+    setupEvolutionChain(evolution_chain);
+    setupResponsiveBackground(pokemon);
+
+    slideInPokemonInfo();
+
+    if(window.innerWidth < 1100){
+        openPokemonResponsiveInfo();
+    }
+}
+
+/** Met à jour l’image du Pokémon affiché */
+function updateCurrentPokemonImage(id) {
+    const currentPokemonImage = document.getElementById('current-pokemon-image');
+    const img = new Image();
+
+    img.onload = function() {
+        currentPokemonImage.src = this.src;
+        currentPokemonImage.style.height = this.height * 3 + 'px';
+    };
+
+    if(id >= 650) {
+        img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/' + id + '.png';
+    } else {
+        img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/' + id + '.gif';
+    }
+}
+
+/** Configure infos basiques du Pokémon */
+function setupPokemonAbout(pokemon, id, species) {
+    document.getElementById('current-pokemon-info').classList.remove('hide');
+    document.getElementById('current-pokemon-id').innerHTML = 'N° ' + pokemon.id;
+    document.getElementById('current-pokemon-name').innerHTML = dressUpPayloadValue(pokemon.name);
+    document.getElementById('current-pokemon-types').innerHTML = getTypeContainers(pokemons[id - 1].types);
+    document.getElementById('current-pokemon-height').innerHTML = pokemon.height / 10 + 'm';
+    document.getElementById('current-pokemon-weight').innerHTML = pokemon.weight / 10 + 'kg';
+
+    for(let i = 0; i < species.flavor_text_entries.length; i++) {
+        if(species.flavor_text_entries[i].language.name === 'en'){
+            document.getElementById('current-pokemon-description').innerHTML = dressUpPayloadValue(species.flavor_text_entries[i].flavor_text.replace('', ' '));
+            break;
+        }
+    }
+}
+
+/** Configure stats du Pokémon */
+function setupPokemonStats(pokemon) {
+    document.getElementById('current-pokemon-stats-atk').innerHTML = pokemon.stats[0].base_stat;
+    document.getElementById('current-pokemon-stats-hp').innerHTML = pokemon.stats[1].base_stat;
+    document.getElementById('current-pokemon-stats-def').innerHTML = pokemon.stats[2].base_stat;
+    document.getElementById('current-pokemon-stats-spa').innerHTML = pokemon.stats[3].base_stat;
+    document.getElementById('current-pokemon-stats-spd').innerHTML = pokemon.stats[4].base_stat;
+    document.getElementById('current-pokemon-stats-speed').innerHTML = pokemon.stats[5].base_stat;
+    document.getElementById('current-pokemon-stats-total').innerHTML = pokemon.stats.reduce((sum, stat) => sum + stat.base_stat, 0);
+}
+
+/** Configure les capacités */
+function setupPokemonAbilities(pokemon) {
+    document.getElementById('current-pokemon-abilitiy-0').innerHTML = dressUpPayloadValue(pokemon.abilities[0].ability.name);
+    if(pokemon.abilities[1]){
+        document.getElementById('current-pokemon-abilitiy-1').classList.remove('hide');
+        document.getElementById('current-pokemon-abilitiy-1').innerHTML = dressUpPayloadValue(pokemon.abilities[1].ability.name);
+    } else {
+        document.getElementById('current-pokemon-abilitiy-1').classList.add('hide');
+    }
+}
+
+/** Configure la chaîne d'évolution */
+function setupEvolutionChain(evolutionChain) {
+    const chain = evolutionChain.chain;
+    const chainContainer =  document.getElementById('current-pokemon-evolution-chain-container');
+    const chainImages = [
+        document.getElementById('current-pokemon-evolution-0'),
+        document.getElementById('current-pokemon-evolution-1'),
+        document.getElementById('current-pokemon-evolution-2')
+    ];
+    const chainLevels = [
+        document.getElementById('current-pokemon-evolution-level-0'),
+        document.getElementById('current-pokemon-evolution-level-1')
+    ];
+
+    if(chain.evolves_to.length !== 0) {
+        chainContainer.classList.remove('hide');
+
+        setupEvolution(chain, 0);
+
+        if(chain.evolves_to[0].evolves_to.length !== 0) {
+            setupEvolution(chain.evolves_to[0], 1);
+            chainImages[2].classList.remove('hide');
+            chainLevels[1].classList.remove('hide');
+        } else {
+            chainImages[2].classList.add('hide');
+            chainLevels[1].classList.add('hide');
+        }
+    } else {
+        chainContainer.classList.add('hide');
+    }
+}
+
+/** Configure images et niveaux d'évolution */
+function setupEvolution(chain, no) {
+    const chainImages = [
+        document.getElementById('current-pokemon-evolution-0'),
+        document.getElementById('current-pokemon-evolution-1'),
+        document.getElementById('current-pokemon-evolution-2')
+    ];
+    const chainLevels = [
+        document.getElementById('current-pokemon-evolution-level-0'),
+        document.getElementById('current-pokemon-evolution-level-1')
+    ];
+    
+    chainImages[no].src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + filterIdFromSpeciesURL(chain.species.url) + '.png';
+    chainImages[no].setAttribute('onClick', 'openInfo(' + filterIdFromSpeciesURL(chain.species.url) + ')');
+
+    chainImages[no + 1].src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + filterIdFromSpeciesURL(chain.evolves_to[0].species.url) + '.png';
+    chainImages[no + 1].setAttribute('onClick', 'openInfo(' + filterIdFromSpeciesURL(chain.evolves_to[0].species.url) + ')');
+
+    if(chain.evolves_to[0].evolution_details[0].min_level) {
+        chainLevels[no].innerHTML = 'Lv. ' + chain.evolves_to[0].evolution_details[0].min_level;
+    } else {
+        chainLevels[no].innerHTML = '?';
+    }
+}
+
+/** Extrait l'id depuis une URL de type species */
+function filterIdFromSpeciesURL(url){
+    return url.replace('https://pokeapi.co/api/v2/pokemon-species/', '').replace('/', '');
+}
+
+/*** RESPONSIVE ***/
+
+/** Définit le background responsive selon type */
+function setupResponsiveBackground(pokemon) {
+    document.getElementById('current-pokemon-responsive-background').style.background = typeColors[pokemon.types[0].type.name];
+}
+
+/** Ouvre le panneau responsive sur petits écrans */
+function openPokemonResponsiveInfo(){
+    document.getElementById('current-pokemon-container').classList.remove('hide');
+    document.getElementById('current-pokemon-container').style.display = 'flex';
+    document.getElementById('current-pokemon-responsive-close').classList.remove('hide');
+    
+    document.getElementById('current-pokemon-responsive-background').classList.remove('hide');
+
+    document.getElementById('current-pokemon-responsive-background').style.opacity = 0;
+    setTimeout(function(){
+        document.getElementById('current-pokemon-responsive-background').style.opacity = 1;
+    }, 20);
+
+    document.getElementsByTagName('html')[0].style.overflow = 'hidden';
+}
+
+/** Ferme les infos responsive */
+function closePokemonInfo(){
+    setTimeout(function(){
+        document.getElementById('current-pokemon-container').classList.add('hide');
+        document.getElementById('current-pokemon-responsive-close').classList.add('hide');
+        document.getElementById('current-pokemon-responsive-background').classList.add('hide');
+    }, 350);
+
+    document.getElementById('current-pokemon-responsive-background').style.opacity = 1;
+    setTimeout(function(){
+        document.getElementById('current-pokemon-responsive-background').style.opacity = 0;
+    }, 10);
+    
+    document.getElementsByTagName('html')[0].style.overflow = 'unset';
+
+    slideOutPokemonInfo();
+}
+
+/** Lors du resize window */
+window.addEventListener('resize', function(){
+    if(document.getElementById('current-pokemon-container').classList.contains('slide-out')){
+        document.getElementById('current-pokemon-container').classList.replace('slide-out', 'slide-in');
+    }
+
+    if(window.innerWidth > 1100) {
+        document.getElementsByTagName('html')[0].style.overflow = 'unset';
+    }
+});
+
+/*** ANIMATIONS SLIDE ***/
+function slideOutPokemonInfo(){
+    document.getElementById('current-pokemon-container').classList.remove('slide-in');
+    document.getElementById('current-pokemon-container').classList.add('slide-out');
+}
+
+function slideInPokemonInfo(){
+    document.getElementById('current-pokemon-container').classList.add('slide-in');
+    document.getElementById('current-pokemon-container').classList.remove('slide-out');
+}
+
+/*** AFFICHAGE LISTE POKEMON ***/
+
+/** Génère le HTML d’un Pokémon dans la liste */
 function renderPokemonListItem(index) {
     if (currentList[index]) {
-        document.getElementById('pokedex-list-render-container').insertAdjacentHTML('beforeend', `<div onclick="openInfo(${currentList[index].id})" class="pokemon-render-result-container container center column">
-                                                                                                    <img class="search-pokemon-image" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${currentList[index].id}.png">
-                                                                                                    <span class="bold font-size-12">N° ${currentList[index].id}</span>
-                                                                                                    <h3>${dressUpPayloadValue(currentList[index].name)}</h3>
-                                                                                                    ${getTypeContainers(currentList[index].types)}
-                                                                                                </div>`);
+        document.getElementById('pokedex-list-render-container').insertAdjacentHTML('beforeend', `
+            <div onclick="openInfo(${currentList[index].id})" class="pokemon-render-result-container container center column">
+                <img class="search-pokemon-image" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${currentList[index].id}.png" alt="sprite ${currentList[index].name}">
+                <span class="bold font-size-12">N° ${currentList[index].id}</span>
+                <h3>${dressUpPayloadValue(currentList[index].name)}</h3>
+                ${getTypeContainers(currentList[index].types)}
+            </div>
+        `);
+    }
+}
 
-        currentlyShowingAmount += 1;
-
-        updatePokemonList();
-    };
-};
-
-function increaseMaxIndex(by) {
-    if (maxIndex + by <= currentList.length) {
-        maxIndex += by;
-    } else {
-        maxIndex = currentList.length - 1;
-    };
-};
-
-/**get type containers for pokemon infos */
+/** Retourne le HTML des types d’un Pokémon */
 function getTypeContainers(typesArray) {
     let htmlToReturn = '<div class="row">';
 
     for (let i = 0; i < typesArray.length; i++) {
         htmlToReturn += `<div class="type-container" style="background: ${typeColors[typesArray[i]]};">
-                                ${dressUpPayloadValue(typesArray[i])}
-                            </div>`;
-    };
+                            ${dressUpPayloadValue(typesArray[i])}
+                         </div>`;
+    }
 
     return htmlToReturn + '</div>';
-};
+}
 
-/**on search input keydown*/
+/*** RECHERCHE ***/
+
+/** Filtre la liste selon l’input */
 function search() {
     setTimeout(function () {
         let searchResults = [];
@@ -288,61 +295,113 @@ function search() {
             if (pokemons[i].name) {
                 if (pokemons[i].name.replaceAll('-', ' ').includes(document.getElementById('search-input').value.toLowerCase())) {
                     searchResults.push(pokemons[i]);
-                };
-            };
-        };
+                }
+            }
+        }
 
         document.getElementById('pokedex-list-render-container').innerHTML = '';
 
         currentList = searchResults;
-        currentlyShowingAmount = 0;
-        maxIndex = 0;
+        currentPage = 1;
 
-        increaseMaxIndex(30);
-        updatePokemonList();
+        createPaginationButtons();
+        renderCurrentPage();
     }, 1);
-};
+}
 
+/*** PAGINATION AVEC BOUTONS ***/
 
-/** Scroll */
+/** Crée les boutons Previous / Next et l’info de page */
+function createPaginationButtons() {
+    const container = document.getElementById('pagination-container');
+    container.innerHTML = `
+        <button id="prev-btn" disabled>Previous</button>
+        <span id="page-info" style="margin: 0 10px;"></span>
+        <button id="next-btn">Next</button>
+    `;
+
+    document.getElementById('prev-btn').addEventListener('click', previousPage);
+    document.getElementById('next-btn').addEventListener('click', nextPage);
+}
+
+/** Met à jour l’état des boutons et le texte de page */
+function updatePaginationButtons() {
+    const totalPages = Math.ceil(currentList.length / itemsPerPage);
+
+    document.getElementById('prev-btn').disabled = currentPage === 1;
+    document.getElementById('next-btn').disabled = currentPage === totalPages || totalPages === 0;
+
+    document.getElementById('page-info').textContent = `Page ${currentPage} / ${totalPages || 1}`;
+}
+
+/** Affiche les Pokémon de la page courante */
+function renderCurrentPage() {
+    const container = document.getElementById('pokedex-list-render-container');
+    container.innerHTML = ''; // Vide la liste avant affichage
+
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = Math.min(start + itemsPerPage, currentList.length);
+
+    for(let i = start; i < end; i++) {
+        renderPokemonListItem(i);
+    }
+
+    updatePaginationButtons();
+    backToTop();
+}
+
+/** Passe à la page suivante */
+function nextPage() {
+    const totalPages = Math.ceil(currentList.length / itemsPerPage);
+    if(currentPage < totalPages) {
+        currentPage++;
+        renderCurrentPage();
+    }
+}
+
+/** Passe à la page précédente */
+function previousPage() {
+    if(currentPage > 1) {
+        currentPage--;
+        renderCurrentPage();
+    }
+}
+
+/*** BOUTON RETOUR EN HAUT ***/
+
+/** Affiche ou masque le bouton "Back to Top" selon scroll */
 window.addEventListener('scroll', function () {
-    addNewScrollPokemon();
     updateBackToTopVisibility();
 });
 
-/**add new scroll pokemon when bottom is reached */
-function addNewScrollPokemon() {
-    if (window.scrollY + 100 >= document.documentElement.scrollHeight - document.documentElement.clientHeight) {
-        increaseMaxIndex(30);
-        updatePokemonList();
-    };
-};
-
-/**make back to top button visible */
+/** Gère la visibilité du bouton */
 function updateBackToTopVisibility() {
     if(window.scrollY > window.innerHeight) {
         document.getElementById('back-to-top-button').classList.remove('hide');
     } else {
         document.getElementById('back-to-top-button').classList.add('hide');
-    };
-};
+    }
+}
 
+/** Scroll vers le haut */
 function backToTop() {
     window.scrollTo(0, 0);
-};
+}
 
+/*** UTILS ***/
 
-/**dress up payload value */
+/** Met en forme une chaîne : première lettre en majuscule, remplace les "-" par espace */
 function dressUpPayloadValue(string) {
     let splitStr = string.toLowerCase().split('-');
     for (let i = 0; i < splitStr.length; i++) {
         splitStr[i] = splitStr[i].charAt(0).toUpperCase() + splitStr[i].substring(1);
-    };
+    }
     return splitStr.join(' ');
-};
-let pokemons = [' '];
+}
 
-/**fetch pokemon name and id */
+/*** CHARGEMENT INITIAL ***/
+
+/** Récupère tous les noms et ids de Pokémon */
 async function getAllNames() {
     let url = 'https://pokeapi.co/api/v2/pokemon/?limit=898';
     let response = await fetch(url);
@@ -354,12 +413,12 @@ async function getAllNames() {
             name: responseAsJson.results[i].name,
             types: []
         });
-    };
+    }
 
     await getAllTypes();
-};
+}
 
-/**fetch pokemon types using Promise.allSettled */
+/** Récupère tous les types des Pokémon (via Promise.allSettled) */
 async function getAllTypes() {
     const typePromises = [];
     for (let i = 0; i < 18; i++) {
@@ -381,18 +440,17 @@ async function getAllTypes() {
                 }
             }
         }
-        // Optionally handle rejected promises here
     });
 
     loadingCompletion();
-};
+}
 
-/**hide loading div after completion */
+/** Cache la div de chargement et affiche la liste */
 function loadingCompletion() {
     const loadingDiv = document.getElementById('loading-div');
     loadingDiv.classList.add('hideLoading');
 
-    setTimeout(function() {
+    setTimeout(function () {
         loadingDiv.classList.replace('hideLoading', 'hide');
         document.body.style.overflow = 'unset';
     }, 500);
@@ -400,5 +458,19 @@ function loadingCompletion() {
     pokemons.splice(0, 1);
     currentList = pokemons;
 
-    updatePokemonList();
+    createPaginationButtons();
+    currentPage = 1;
+    renderCurrentPage();
+}
+
+/*** INITIALISATION AU DEMARRAGE ***/
+
+window.onload = function () {
+    getAllNames();
+
+    // Attach event listener à la recherche
+    document.getElementById('search-input').addEventListener('input', search);
+
+    // Setup bouton retour en haut
+    document.getElementById('back-to-top-button').addEventListener('click', backToTop);
 };
